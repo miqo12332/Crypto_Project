@@ -68,6 +68,10 @@ def register():
     save_clients(clients)
     return jsonify({"client_id": cid, "long_term_key": key.hex()})
 
+@app.route("/clients", methods=["GET"])
+def list_clients():
+    return jsonify(sorted(list(clients.keys())))
+
 @app.route("/shared-key", methods=["POST"])
 def shared():
     a = request.json["client_a"]
@@ -82,6 +86,13 @@ def encrypt_api():
     key = request.json["key"]
     msg = request.json["message"]
     return jsonify({"ciphertext": aes_encrypt(key, msg)})
+
+@app.route("/decrypt", methods=["POST"])
+def decrypt_api():
+    from crypto_utils import aes_decrypt
+    key = request.json["key"]
+    ct = request.json["ciphertext"]
+    return jsonify({"plaintext": aes_decrypt(key, ct)})
 
 @app.route("/send", methods=["POST"])
 def send_msg():

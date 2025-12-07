@@ -1,41 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Secure Chat UI</title>
+    <title>Key Predistribution Demo</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<div class="page">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Key Predistribution System</p>
+            <h1>Secure messaging with derived shared keys</h1>
+            <p class="lede">Generate long-term keys, derive shared secrets on demand, encrypt traffic and verify decrypted payloads all from one panel.</p>
+        </div>
+        <div class="hero-card">
+            <div class="hero-value">
+                <span class="label">Master key</span>
+                <span class="value">Derived server-side</span>
+            </div>
+            <div class="hero-value">
+                <span class="label">Shared key logic</span>
+                <span class="value">HMAC-SHA256</span>
+            </div>
+            <div class="hero-value">
+                <span class="label">Cipher</span>
+                <span class="value">AES-256-CBC</span>
+            </div>
+        </div>
+    </header>
 
-<div class="container">
+    <main class="grid">
+        <section class="card wide">
+            <div class="card-head">
+                <div>
+                    <p class="eyebrow">Data provisioning</p>
+                    <h2>Register users</h2>
+                    <p class="hint">Registering derives and stores a long-term key from the master key. Newly added users become available in all selectors automatically.</p>
+                </div>
+                <div class="badge success" id="register_status">Waiting for input</div>
+            </div>
+            <form id="register_form" class="form-row">
+                <label>
+                    <span>Username</span>
+                    <input id="reg_name" placeholder="e.g. alice" required />
+                </label>
+                <button type="submit" class="primary">Register</button>
+            </form>
+            <pre class="code" id="reg_output">Long-term key will appear here after registration.</pre>
+        </section>
 
-    <h1>Secure Messaging System</h1>
+        <section class="card">
+            <div class="card-head">
+                <div>
+                    <p class="eyebrow">Shared key generation</p>
+                    <h2>Preview shared secret</h2>
+                </div>
+                <div class="badge" id="shared_status">Idle</div>
+            </div>
+            <form id="shared_form" class="form-row">
+                <label>
+                    <span>User A</span>
+                    <select id="shared_a"></select>
+                </label>
+                <label>
+                    <span>User B</span>
+                    <select id="shared_b"></select>
+                </label>
+                <button type="submit">Generate</button>
+            </form>
+            <pre class="code" id="shared_output">Select users to derive a shared key.</pre>
+        </section>
 
-    <section>
-        <h2>Register User</h2>
-        <input id="reg_name" placeholder="Username">
-        <button onclick="registerUser()">Register</button>
-    </section>
+        <section class="card">
+            <div class="card-head">
+                <div>
+                    <p class="eyebrow">Send flow</p>
+                    <h2>Encrypt &amp; dispatch</h2>
+                </div>
+                <div class="badge" id="send_status">Idle</div>
+            </div>
+            <form id="send_form" class="form-grid">
+                <label>
+                    <span>Sender</span>
+                    <select id="send_from"></select>
+                </label>
+                <label>
+                    <span>Receiver</span>
+                    <select id="send_to"></select>
+                </label>
+                <label class="full">
+                    <span>Message</span>
+                    <textarea id="send_msg" rows="3" placeholder="Type a message"></textarea>
+                </label>
+                <button type="submit" class="primary">Encrypt &amp; send</button>
+            </form>
+            <div class="two-up">
+                <div>
+                    <p class="hint">Derived shared key</p>
+                    <pre class="code" id="send_key">-</pre>
+                </div>
+                <div>
+                    <p class="hint">Ciphertext</p>
+                    <pre class="code" id="send_cipher">-</pre>
+                </div>
+            </div>
+        </section>
 
-    <section>
-        <h2>Send Message</h2>
-        <input id="send_from" placeholder="Sender">
-        <input id="send_to" placeholder="Receiver">
-        <input id="send_msg" placeholder="Message">
-        <button onclick="sendMessage()">Send</button>
-    </section>
-
-    <section>
-        <h2>Inbox</h2>
-        <input id="inbox_user" placeholder="Username">
-        <button onclick="checkInbox()">Check</button>
-    </section>
-
-    <section>
-        <h2>Messages</h2>
-        <div id="messages"></div>
-    </section>
-
+        <section class="card wide">
+            <div class="card-head">
+                <div>
+                    <p class="eyebrow">Inbox &amp; verification</p>
+                    <h2>See encrypted and decrypted payloads</h2>
+                </div>
+                <div class="badge" id="inbox_status">Idle</div>
+            </div>
+            <div class="form-row">
+                <label>
+                    <span>Inbox owner</span>
+                    <select id="inbox_user"></select>
+                </label>
+                <button id="inbox_refresh" class="ghost">Refresh inbox</button>
+            </div>
+            <div id="messages" class="message-list"></div>
+        </section>
+    </main>
 </div>
 
 <script src="/static/app.js"></script>
