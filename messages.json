@@ -1,0 +1,18 @@
+{
+    "mikayel": [
+        {
+            "id": "e5f2ac2c",
+            "from": "vahe",
+            "ciphertext": "30c283527a01294990b543a8f4e392c1054c77c4462d2203916362143594d7eb",
+            "timestamp": 1765098791.7619379,
+            "status": "read"
+        },
+        {
+            "id": "54b11e98",
+            "from": "vahe",
+            "ciphertext": "b2b8b748719029cfaf41599f6179a62139b470c39e85b999341337c80a2b165e",
+            "timestamp": 1765098810.724705,
+            "status": "read"
+        }
+    ]
+}

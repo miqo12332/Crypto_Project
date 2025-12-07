@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Chat UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Secure Messaging System</h1>
+
+    <section>
+        <h2>Register User</h2>
+        <input id="reg_name" placeholder="Username">
+        <button onclick="registerUser()">Register</button>
+    </section>
+
+    <section>
+        <h2>Send Message</h2>
+        <input id="send_from" placeholder="Sender">
+        <input id="send_to" placeholder="Receiver">
+        <input id="send_msg" placeholder="Message">
+        <button onclick="sendMessage()">Send</button>
+    </section>
+
+    <section>
+        <h2>Inbox</h2>
+        <input id="inbox_user" placeholder="Username">
+        <button onclick="checkInbox()">Check</button>
+    </section>
+
+    <section>
+        <h2>Messages</h2>
+        <div id="messages"></div>
+    </section>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
