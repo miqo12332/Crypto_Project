@@ -43,6 +43,16 @@ MESSAGES = load_messages()
 def derive_long_term_key(cid):
     return hmac.new(MASTER_KEY, cid.encode(), hashlib.sha256).digest()
 
+
+def describe_long_term_derivation(cid, key_bytes):
+    return {
+        "algorithm": "HMAC-SHA256(master_key, client_id)",
+        "client_id": cid,
+        "client_id_hex": cid.encode().hex(),
+        "master_key_hex": MASTER_KEY.hex(),
+        "hmac_digest_hex": key_bytes.hex(),
+    }
+
 def derive_shared_key(a, b):
     Ka = bytes.fromhex(clients[a])
     Kb = bytes.fromhex(clients[b])
@@ -50,7 +60,25 @@ def derive_shared_key(a, b):
         msg = Ka + Kb + f"{a}|{b}".encode()
     else:
         msg = Kb + Ka + f"{b}|{a}".encode()
-    return hmac.new(MASTER_KEY, msg, hashlib.sha256).digest()
+    digest = hmac.new(MASTER_KEY, msg, hashlib.sha256).digest()
+    return digest
+
+
+def describe_shared_derivation(a, b, digest):
+    Ka = bytes.fromhex(clients[a])
+    Kb = bytes.fromhex(clients[b])
+    ordered = (a, b) if a < b else (b, a)
+    msg = (Ka if ordered[0] == a else Kb) + (Kb if ordered[1] == b else Ka) + f"{ordered[0]}|{ordered[1]}".encode()
+    return {
+        "algorithm": "HMAC-SHA256(master_key, Ka||Kb||names)",
+        "participants": ordered,
+        "Ka_hex": Ka.hex(),
+        "Kb_hex": Kb.hex(),
+        "concat_hex": msg.hex(),
+        "label": f"{ordered[0]}|{ordered[1]}",
+        "master_key_hex": MASTER_KEY.hex(),
+        "hmac_digest_hex": digest.hex(),
+    }
 
 @app.route("/")
 def ui():
@@ -66,7 +94,11 @@ def register():
     key = derive_long_term_key(cid)
     clients[cid] = key.hex()
     save_clients(clients)
-    return jsonify({"client_id": cid, "long_term_key": key.hex()})
+    return jsonify({
+        "client_id": cid,
+        "long_term_key": key.hex(),
+        "derivation": describe_long_term_derivation(cid, key)
+    })
 
 @app.route("/clients", methods=["GET"])
 def list_clients():
@@ -78,21 +110,25 @@ def shared():
     b = request.json["client_b"]
     if a not in clients or b not in clients:
         return jsonify({"error": "unknown"}), 404
-    return jsonify({"shared_key": derive_shared_key(a, b).hex()})
+    digest = derive_shared_key(a, b)
+    return jsonify({
+        "shared_key": digest.hex(),
+        "derivation": describe_shared_derivation(a, b, digest)
+    })
 
 @app.route("/encrypt", methods=["POST"])
 def encrypt_api():
     from crypto_utils import aes_encrypt
     key = request.json["key"]
     msg = request.json["message"]
-    return jsonify({"ciphertext": aes_encrypt(key, msg)})
+    return jsonify(aes_encrypt(key, msg))
 
 @app.route("/decrypt", methods=["POST"])
 def decrypt_api():
     from crypto_utils import aes_decrypt
     key = request.json["key"]
     ct = request.json["ciphertext"]
-    return jsonify({"plaintext": aes_decrypt(key, ct)})
+    return jsonify(aes_decrypt(key, ct))
 
 @app.route("/send", methods=["POST"])
 def send_msg():
