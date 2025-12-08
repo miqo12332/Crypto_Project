@@ -14,8 +14,16 @@ def aes_encrypt(key_hex, plaintext):
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
-    encrypted = encryptor.update(pad(plaintext.encode())) + encryptor.finalize()
-    return (iv + encrypted).hex()
+    padded = pad(plaintext.encode())
+    encrypted = encryptor.update(padded) + encryptor.finalize()
+    payload = iv + encrypted
+    return {
+        "ciphertext": payload.hex(),
+        "iv": iv.hex(),
+        "algorithm": "AES-256-CBC",
+        "padded_plaintext": padded.hex(),
+        "padding_length": padded[-1],
+    }
 
 def aes_decrypt(key_hex, ciphertext_hex):
     key = bytes.fromhex(key_hex)
@@ -25,4 +33,12 @@ def aes_decrypt(key_hex, ciphertext_hex):
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted = decryptor.update(ct) + decryptor.finalize()
-    return unpad(decrypted).decode()
+    unpadded = unpad(decrypted)
+    return {
+        "plaintext": unpadded.decode(),
+        "iv": iv.hex(),
+        "algorithm": "AES-256-CBC",
+        "ciphertext": ciphertext_hex,
+        "padded_plaintext": decrypted.hex(),
+        "padding_length": decrypted[-1],
+    }

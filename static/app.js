@@ -11,6 +11,7 @@ const selectors = {
     sendMsg: document.getElementById("send_msg"),
     sendKey: document.getElementById("send_key"),
     sendCipher: document.getElementById("send_cipher"),
+    sendDetail: document.getElementById("send_detail"),
     sendStatus: document.getElementById("send_status"),
     inboxUser: document.getElementById("inbox_user"),
     inboxStatus: document.getElementById("inbox_status"),
@@ -49,7 +50,11 @@ async function registerUser(evt) {
     const data = await res.json();
     if (res.ok) {
         setBadge(selectors.registerStatus, "User registered", "success");
-        selectors.regOutput.textContent = JSON.stringify(data, null, 2);
+        selectors.regOutput.textContent = JSON.stringify({
+            client_id: data.client_id,
+            long_term_key: data.long_term_key,
+            algorithm: data.derivation.algorithm,
+        }, null, 2);
         selectors.regName.value = "";
         await refreshClientOptions();
     } else {
@@ -65,7 +70,7 @@ async function getSharedKey(a, b) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Unable to derive key");
-    return data.shared_key;
+    return data;
 }
 
 async function encryptMessage(key, msg) {
@@ -74,7 +79,7 @@ async function encryptMessage(key, msg) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: key, message: msg })
     });
-    return (await res.json()).ciphertext;
+    return await res.json();
 }
 
 async function decryptMessage(key, ciphertext) {
@@ -84,7 +89,7 @@ async function decryptMessage(key, ciphertext) {
         body: JSON.stringify({ key, ciphertext })
     });
     const data = await res.json();
-    return data.plaintext;
+    return data;
 }
 
 async function deriveShared(evt) {
@@ -93,8 +98,12 @@ async function deriveShared(evt) {
     const b = selectors.sharedB.value;
     setBadge(selectors.sharedStatus, "Deriving...", "info");
     try {
-        const key = await getSharedKey(a, b);
-        selectors.sharedOutput.textContent = JSON.stringify({ users: `${a} & ${b}`, shared_key: key }, null, 2);
+        const { shared_key, derivation } = await getSharedKey(a, b);
+        selectors.sharedOutput.textContent = JSON.stringify({
+            users: `${a} & ${b}`,
+            shared_key,
+            algorithm: derivation.algorithm,
+        }, null, 2);
         setBadge(selectors.sharedStatus, "Done", "success");
     } catch (err) {
         selectors.sharedOutput.textContent = err.message;
@@ -110,15 +119,23 @@ async function sendMessage(evt) {
     if (!message) return;
     setBadge(selectors.sendStatus, "Encrypting...", "info");
     try {
-        const key = await getSharedKey(sender, receiver);
-        const ct = await encryptMessage(key, message);
-        selectors.sendKey.textContent = key;
-        selectors.sendCipher.textContent = ct;
+        const { shared_key, derivation } = await getSharedKey(sender, receiver);
+        const enc = await encryptMessage(shared_key, message);
+        selectors.sendKey.textContent = JSON.stringify({
+            shared_key,
+            algorithm: derivation.algorithm,
+        }, null, 2);
+        selectors.sendCipher.textContent = enc.ciphertext;
+        selectors.sendDetail.textContent = JSON.stringify({
+            iv: enc.iv,
+            padding_length: enc.padding_length,
+            padded_plaintext: enc.padded_plaintext,
+        }, null, 2);
 
         await fetch("/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sender, receiver, ciphertext: ct })
+            body: JSON.stringify({ sender, receiver, ciphertext: enc.ciphertext })
         });
         selectors.sendMsg.value = "";
         setBadge(selectors.sendStatus, "Sent securely", "success");
@@ -127,9 +144,10 @@ async function sendMessage(evt) {
     }
 }
 
-function renderMessageCard(msg, plaintext) {
+function renderMessageCard(msg, decrypted) {
     const el = document.createElement("div");
     el.className = "msg";
+    const plaintext = decrypted?.plaintext ?? decrypted;
     el.innerHTML = `
         <div class="meta">
             <div><strong>From:</strong> ${msg.from}</div>
@@ -159,9 +177,9 @@ async function checkInbox(evt) {
     selectors.messages.innerHTML = "";
     for (const m of msgs) {
         try {
-            const key = await getSharedKey(user, m.from);
-            const plain = await decryptMessage(key, m.ciphertext);
-            selectors.messages.appendChild(renderMessageCard(m, plain));
+            const { shared_key, derivation } = await getSharedKey(user, m.from);
+            const plain = await decryptMessage(shared_key, m.ciphertext);
+            selectors.messages.appendChild(renderMessageCard(m, { ...plain, shared_key, derivation }));
         } catch (err) {
             selectors.messages.appendChild(renderMessageCard(m, `Error: ${err.message}`));
         }
